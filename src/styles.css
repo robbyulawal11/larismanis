@@ -464,6 +464,16 @@ textarea {
   margin-bottom: 12px;
 }
 
+/* Di kartu onboarding latarnya terang, bukan hijau tua seperti topbar —
+   tanpa ini kata "Laris" (putih) tidak terlihat. */
+.onboard-brand .brand-name {
+  color: var(--green-900);
+}
+
+.onboard-brand .brand-name span {
+  color: #d9a416; /* emas lebih gelap agar tetap terbaca di latar terang */
+}
+
 .onboard-lead {
   font-size: 14.5px;
   line-height: 1.6;
