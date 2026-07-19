@@ -43,7 +43,7 @@ Pastikan hal-hal berikut sudah siap:
 2. Klik **"Create API key"** → pilih/buat project → salin key yang muncul (formatnya `AIza...`).
 3. Simpan sementara di notepad. **Jangan pernah membagikan key ini atau meng-commit-nya ke GitHub.**
 
-Catatan kuota gratis: model bawaan aplikasi adalah `gemini-2.5-flash`. Kuota gratisnya dibatasi per menit dan per hari — lebih dari cukup untuk pengembangan dan demo penjurian. Kalau saat demo intensif kena limit per menit, tunggu ±60 detik (aplikasi sudah menampilkan pesan ramah otomatis). Jika ingin kuota harian lebih longgar, ganti model di `.env` menjadi `VITE_GEMINI_MODEL=gemini-2.5-flash-lite`.
+Catatan kuota gratis: model bawaan aplikasi adalah `gemini-3.5-flash`. Kuota gratisnya dibatasi per menit dan per hari — lebih dari cukup untuk pengembangan dan demo penjurian. Kalau saat demo intensif kena limit per menit, tunggu ±60 detik (aplikasi sudah menampilkan pesan ramah otomatis). Jika ingin kuota harian lebih longgar, ganti model di `.env` menjadi `VITE_GEMINI_MODEL=gemini-3.1-flash-lite`.
 
 ---
 
@@ -219,7 +219,7 @@ Sebelum juri menguji, isi warung demo dengan **15–25 transaksi bervariasi sela
 
 1. **"Satu langkah lagi ⚙️" muncul terus** → `.env` belum terisi benar / server dev belum di-restart setelah mengubah `.env`. Matikan (`Ctrl+C`) lalu `npm run dev` lagi.
 2. **Error saat buat warung / "Database error"** → SQL di Langkah 2.3 belum dijalankan, atau URL/anon key salah salin. Jalankan ulang seluruh `supabase_setup.sql` (aman diulang).
-3. **"Bang Laris lagi ramai pelanggan"** → limit per menit Gemini free tier. Tunggu ±60 detik. Untuk kuota harian lebih besar: `VITE_GEMINI_MODEL=gemini-2.5-flash-lite` di `.env` (di Vercel tidak perlu diubah, kecuali Anda menambah env `VITE_GEMINI_MODEL`).
+3. **"Bang Laris lagi ramai pelanggan"** → limit per menit Gemini free tier. Tunggu ±60 detik. Untuk kuota harian lebih besar: `VITE_GEMINI_MODEL=gemini-3.1-flash-lite` di `.env` (di Vercel tidak perlu diubah, kecuali Anda menambah env `VITE_GEMINI_MODEL`).
 4. **Tombol mic abu-abu / tidak merespons** → pakai Chrome/Edge; pastikan lewat `localhost` atau HTTPS (Vercel); cek izin mikrofon di ikon gembok address bar. Di Firefox/beberapa browser, Web Speech belum didukung — pencatatan tetap bisa lewat ketik.
 5. **AI menjawab tapi transaksi tidak tercatat** → itu perilaku benar bila kalimat tidak mengandung angka harga (AI dilarang mengarang); Bang Laris akan balik bertanya harganya.
 6. **Deploy Vercel sukses tapi AI gagal di produksi** → env `GEMINI_API_KEY` belum ditambahkan / typo. Tambahkan di Settings → Environment Variables lalu **Redeploy**.

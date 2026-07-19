@@ -11,7 +11,7 @@ export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 // memakai proxy aman /api/gemini.
 export const GEMINI_BROWSER_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 
-export const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.5-flash';
+export const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL || 'gemini-3.5-flash';
 
 export const hasSupabase = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 

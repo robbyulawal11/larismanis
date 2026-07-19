@@ -8,14 +8,17 @@
 // tidak pernah dikirim ke browser.
 //
 // Endpoint : POST /api/gemini
-// Body     : { model: "gemini-2.5-flash", body: { ...payload Gemini } }
+// Body     : { model: "gemini-3.5-flash", body: { ...payload Gemini } }
 // ============================================================
 
 const ALLOWED_MODELS = [
+  'gemini-3.5-flash',
+  'gemini-3.1-flash-lite',
+  'gemini-3-flash-preview',
+  // Model 2.5 sudah ditutup untuk pengguna API baru (Juli 2026),
+  // dibiarkan di sini hanya untuk key lama yang masih punya akses.
   'gemini-2.5-flash',
   'gemini-2.5-flash-lite',
-  'gemini-3-flash-preview',
-  'gemini-3.5-flash',
 ];
 
 export default async function handler(req, res) {
@@ -36,7 +39,7 @@ export default async function handler(req, res) {
 
   try {
     const { model, body } = req.body || {};
-    const chosenModel = ALLOWED_MODELS.includes(model) ? model : 'gemini-2.5-flash';
+    const chosenModel = ALLOWED_MODELS.includes(model) ? model : 'gemini-3.5-flash';
 
     const upstream = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${chosenModel}:generateContent`,
