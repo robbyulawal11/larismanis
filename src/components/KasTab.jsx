@@ -8,8 +8,8 @@
 
 import React, { useMemo, useState } from 'react';
 import { aiAnalysis } from '../lib/gemini.js';
-import { rupiah, dateKey } from '../lib/utils.js';
-import { ArrowUpIcon, ArrowDownIcon, PlusIcon, SparkIcon } from './Icons.jsx';
+import { rupiah, dateKey, transactionsToCSV, downloadTextFile } from '../lib/utils.js';
+import { ArrowUpIcon, ArrowDownIcon, PlusIcon, SparkIcon, DownloadIcon } from './Icons.jsx';
 import Receipt from './Receipt.jsx';
 
 const PERIODS = [
@@ -83,6 +83,21 @@ export default function KasTab({ store, transactions, summary, dataContext, onMa
     } finally {
       setLoadingA(false);
     }
+  }
+
+  function downloadCSV() {
+    if (filtered.length === 0) {
+      return notify('Belum ada catatan di periode ini untuk diunduh.', 'error');
+    }
+    const periodLabel = (PERIODS.find((p) => p.key === period) || PERIODS[0]).label;
+    const slug = (s) =>
+      String(s)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+    const filename = `buku-kas-${slug(store.name)}-${slug(periodLabel)}-${dateKey(new Date())}.csv`;
+    downloadTextFile(filename, transactionsToCSV(filtered));
+    notify('Buku kas terunduh ✓ Buka filenya di Excel/Sheets ya.', 'ok');
   }
 
   async function submitManual(e) {
@@ -199,9 +214,19 @@ export default function KasTab({ store, transactions, summary, dataContext, onMa
 
       <div className="kas-list-head">
         <h3>Nota tercatat {period === 'today' ? 'hari ini' : period === 'week' ? '7 hari terakhir' : '30 hari terakhir'}</h3>
-        <button type="button" className="btn btn-small" onClick={() => setShowForm((v) => !v)}>
-          <PlusIcon width={16} height={16} /> Manual
-        </button>
+        <div className="kas-list-actions">
+          <button
+            type="button"
+            className="btn btn-small"
+            onClick={downloadCSV}
+            title="Unduh catatan pemasukan & pengeluaran periode ini (CSV untuk Excel)"
+          >
+            <DownloadIcon width={16} height={16} /> Unduh
+          </button>
+          <button type="button" className="btn btn-small" onClick={() => setShowForm((v) => !v)}>
+            <PlusIcon width={16} height={16} /> Manual
+          </button>
+        </div>
       </div>
 
       {showForm && (

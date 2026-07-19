@@ -197,6 +197,73 @@ export function summaryForAI(store, s, recent) {
   ].join('\n');
 }
 
+/** Satu sel CSV: dibungkus kutip bila mengandung ; " atau baris baru */
+function csvCell(value) {
+  const s = String(value == null ? '' : value);
+  return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+/**
+ * Ubah daftar transaksi menjadi teks CSV berbahasa Indonesia.
+ * - Pemisah ";" dan BOM UTF-8 supaya langsung rapi dibuka di
+ *   Excel dengan pengaturan wilayah Indonesia.
+ * - Urut dari catatan terlama ke terbaru (gaya buku kas).
+ * - Ditutup baris ringkasan: total masuk, keluar, dan laba.
+ */
+export function transactionsToCSV(transactions) {
+  const rows = [...transactions].sort(
+    (a, b) => new Date(a.created_at) - new Date(b.created_at)
+  );
+
+  const lines = [
+    ['Tanggal', 'Jam', 'Jenis', 'Barang/Keperluan', 'Jumlah', 'Harga Satuan (Rp)', 'Total (Rp)'],
+  ];
+
+  let totalIn = 0;
+  let totalOut = 0;
+  for (const t of rows) {
+    const d = new Date(t.created_at);
+    const isIn = t.type === 'in';
+    const total = Number(t.total) || 0;
+    if (isIn) totalIn += total;
+    else totalOut += total;
+    lines.push([
+      dateKey(d),
+      `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+      isIn ? 'Pemasukan' : 'Pengeluaran',
+      t.item || '-',
+      Number(t.qty) || 1,
+      Number(t.unit_price) || 0,
+      total,
+    ]);
+  }
+
+  lines.push(
+    [],
+    ['RINGKASAN'],
+    ['Total Pemasukan (Rp)', totalIn],
+    ['Total Pengeluaran (Rp)', totalOut],
+    ['Laba (Rp)', totalIn - totalOut],
+    ['Jumlah Catatan', rows.length]
+  );
+
+  const BOM = String.fromCharCode(0xfeff); // penanda UTF-8 supaya Excel tidak salah baca huruf
+  return BOM + lines.map((cols) => cols.map(csvCell).join(';')).join('\r\n');
+}
+
+/** Unduh teks sebagai file lewat browser */
+export function downloadTextFile(filename, text, mime = 'text/csv;charset=utf-8') {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 /** Generator kode warung 6 karakter (tanpa huruf/angka ambigu O,0,I,1,L) */
 export function generateStoreCode() {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';

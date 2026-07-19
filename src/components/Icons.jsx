@@ -87,6 +87,13 @@ export const CheckIcon = (p) => (
   </svg>
 );
 
+export const DownloadIcon = (p) => (
+  <svg {...base} {...p}>
+    <path d="M12 3v12M7 10l5 5 5-5" />
+    <path d="M4 19h16" />
+  </svg>
+);
+
 export const ArrowUpIcon = (p) => (
   <svg {...base} {...p}>
     <path d="M12 19V5M5 12l7-7 7 7" />
