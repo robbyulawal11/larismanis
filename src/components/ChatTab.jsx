@@ -19,6 +19,27 @@ const QUICK_CHIPS = [
   'Apa produk paling laris?',
 ];
 
+// Pesan ramah untuk tiap kode error Web Speech API
+const MIC_ERROR_MESSAGES = {
+  'not-allowed':
+    'Izin mikrofon diblokir. Klik ikon gembok 🔒 di sebelah alamat situs → izinkan Mikrofon → coba lagi.',
+  'service-not-allowed':
+    'Browser memblokir layanan input suara. Cek izin mikrofon di pengaturan situs, lalu muat ulang halaman.',
+  'audio-capture':
+    'Mikrofon tidak ditemukan. Pastikan perangkat punya mic yang aktif dan tidak dipakai aplikasi lain.',
+  network:
+    'Input suara butuh internet (suara diproses di server browser). Cek koneksi lalu coba lagi ya.',
+  'no-speech': 'Tidak ada suara yang tertangkap. Coba lagi, bicara lebih dekat ke mic ya.',
+  'language-not-supported': 'Browser ini belum mendukung input suara bahasa Indonesia.',
+};
+
+const MIC_ISSUE_MESSAGES = {
+  'no-support':
+    'Browser ini belum mendukung input suara. Pakai Chrome atau Edge ya — pencatatan tetap bisa lewat ketik.',
+  insecure:
+    'Input suara hanya jalan lewat HTTPS atau localhost. Buka aplikasi lewat alamat https:// (mis. Vercel), jangan lewat IP http:// biasa.',
+};
+
 export default function ChatTab({ store, dataContext, onSaveTransactions, notify }) {
   const [messages, setMessages] = useState(() => [
     {
@@ -35,7 +56,8 @@ export default function ChatTab({ store, dataContext, onSaveTransactions, notify
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
-  const [micSupported, setMicSupported] = useState(true);
+  // null = mic siap dipakai; 'no-support' / 'insecure' = ada kendala
+  const [micIssue, setMicIssue] = useState(null);
 
   const recogRef = useRef(null);
   const bottomRef = useRef(null);
@@ -46,32 +68,52 @@ export default function ChatTab({ store, dataContext, onSaveTransactions, notify
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
-      setMicSupported(false);
+      setMicIssue('no-support');
+      return;
+    }
+    // Web Speech hanya berjalan di HTTPS/localhost. Di http:// biasa
+    // (mis. buka lewat IP dari HP), start() selalu gagal diam-diam.
+    if (!window.isSecureContext) {
+      setMicIssue('insecure');
       return;
     }
     const r = new SR();
     r.lang = 'id-ID';
     r.interimResults = false;
     r.maxAlternatives = 1;
+    r.onstart = () => setListening(true);
     r.onresult = (e) => {
-      const text = e.results[0][0].transcript;
-      setInput((prev) => (prev ? prev + ' ' + text : text));
+      const text = (e.results[0][0].transcript || '').trim();
+      if (text) setInput((prev) => (prev ? prev + ' ' + text : text));
     };
     r.onend = () => setListening(false);
-    r.onerror = () => setListening(false);
+    r.onerror = (e) => {
+      setListening(false);
+      if (e.error === 'aborted') return; // dihentikan sendiri, bukan masalah
+      notify(
+        MIC_ERROR_MESSAGES[e.error] || `Input suara gagal (${e.error || 'unknown'}). Coba lagi ya.`,
+        'error'
+      );
+    };
     recogRef.current = r;
     return () => {
       try {
         r.abort();
       } catch (_) {}
     };
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, loading]);
 
   function toggleMic() {
+    // Tombol tetap bisa diklik saat bermasalah supaya penggunanya
+    // tahu kenapa (title hover tidak terlihat di HP).
+    if (micIssue) {
+      notify(MIC_ISSUE_MESSAGES[micIssue], 'error');
+      return;
+    }
     const r = recogRef.current;
     if (!r) return;
     if (listening) {
@@ -82,7 +124,9 @@ export default function ChatTab({ store, dataContext, onSaveTransactions, notify
         r.start();
         setListening(true);
       } catch (_) {
+        // start() saat sesi sebelumnya belum benar-benar berhenti
         setListening(false);
+        notify('Mic sedang sibuk. Tunggu sebentar lalu coba lagi ya.', 'error');
       }
     }
   }
@@ -167,15 +211,14 @@ export default function ChatTab({ store, dataContext, onSaveTransactions, notify
       <form className="chat-inputbar" onSubmit={onSubmit}>
         <button
           type="button"
-          className={'mic-btn' + (listening ? ' listening' : '')}
+          className={'mic-btn' + (listening ? ' listening' : '') + (micIssue ? ' unavailable' : '')}
           onClick={toggleMic}
-          disabled={!micSupported}
           title={
-            micSupported
-              ? listening
+            micIssue
+              ? MIC_ISSUE_MESSAGES[micIssue]
+              : listening
                 ? 'Berhenti mendengarkan'
                 : 'Catat pakai suara'
-              : 'Browser ini belum mendukung input suara — pakai Chrome ya'
           }
           aria-label="Input suara"
         >

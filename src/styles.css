@@ -699,7 +699,8 @@ textarea {
   box-shadow: 0 2px 0 #d9a416;
 }
 
-.mic-btn:disabled {
+.mic-btn:disabled,
+.mic-btn.unavailable {
   background: var(--line);
   color: var(--ink-soft);
   box-shadow: none;
