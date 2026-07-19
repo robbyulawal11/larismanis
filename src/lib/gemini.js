@@ -14,14 +14,23 @@
 import { GEMINI_BROWSER_KEY, GEMINI_MODEL } from './config.js';
 
 /** Panggilan dasar ke Gemini. Lokal: langsung ke Google. Produksi: via proxy /api/gemini. */
-async function callGemini({ system, parts, temperature = 0.7, maxOutputTokens = 1600 }) {
+async function callGemini({ system, parts, temperature = 0.7, maxOutputTokens = 8192 }) {
+  const generationConfig = {
+    temperature,
+    maxOutputTokens,
+    responseMimeType: 'application/json',
+  };
+  // Model Gemini 3+ "berpikir" dulu sebelum menjawab, dan token
+  // berpikirnya ikut memakan jatah maxOutputTokens — kalau jatahnya
+  // sempit, JSON jawaban terpotong. Level "low" cukup untuk tugas
+  // di aplikasi ini sekaligus hemat kuota & lebih cepat.
+  if (/^gemini-[3-9]/.test(GEMINI_MODEL)) {
+    generationConfig.thinkingConfig = { thinkingLevel: 'low' };
+  }
+
   const body = {
     contents: [{ role: 'user', parts }],
-    generationConfig: {
-      temperature,
-      maxOutputTokens,
-      responseMimeType: 'application/json',
-    },
+    generationConfig,
   };
   if (system) body.systemInstruction = { parts: [{ text: system }] };
 
@@ -47,24 +56,46 @@ async function callGemini({ system, parts, temperature = 0.7, maxOutputTokens = 
 
   const data = await res.json().catch(() => null);
 
-  if (!res.ok) {
-    const raw = data && data.error && (data.error.message || data.error);
-    if (res.status === 429) {
-      throw new Error('Bang Laris lagi ramai pelanggan (kuota AI per menit tercapai). Tunggu ±1 menit lalu coba lagi ya.');
-    }
-    throw new Error(typeof raw === 'string' && raw ? raw : `Layanan AI bermasalah (${res.status}).`);
+  if (!res.ok) throw toApiError(res.status, data);
+  return parseModelAnswer(data);
+}
+
+/** Ubah respons error HTTP menjadi Error berpesan ramah. */
+function toApiError(status, data) {
+  if (status === 429) {
+    return new Error('Bang Laris lagi ramai pelanggan (kuota AI per menit tercapai). Tunggu ±1 menit lalu coba lagi ya.');
+  }
+  const raw = data?.error?.message || data?.error;
+  return new Error(typeof raw === 'string' && raw ? raw : `Layanan AI bermasalah (${status}).`);
+}
+
+/** Ambil teks jawaban dari respons Gemini lalu parse JSON-nya. */
+function parseModelAnswer(data) {
+  const cand = data?.candidates?.[0];
+  if (!cand) {
+    const blockReason = data?.promptFeedback?.blockReason;
+    throw new Error(
+      blockReason
+        ? `Permintaan ditolak filter keamanan AI (${blockReason}). Coba ganti foto atau kalimatnya ya.`
+        : 'AI tidak memberikan jawaban. Coba sekali lagi ya.'
+    );
   }
 
-  const text =
-    (data &&
-      data.candidates &&
-      data.candidates[0] &&
-      data.candidates[0].content &&
-      data.candidates[0].content.parts &&
-      data.candidates[0].content.parts.map((p) => p.text || '').join('')) ||
-    '';
+  // Model "thinking" bisa menyertakan bagian berpikir (thought) —
+  // jangan ikut digabung, cukup teks jawabannya saja.
+  const text = (cand.content?.parts || [])
+    .filter((p) => !p.thought)
+    .map((p) => p.text || '')
+    .join('');
 
-  return safeParseJSON(text);
+  try {
+    return safeParseJSON(text);
+  } catch (err) {
+    if (cand.finishReason === 'MAX_TOKENS') {
+      throw new Error('Jawaban AI terpotong karena kehabisan jatah token. Coba sekali lagi ya.');
+    }
+    throw err;
+  }
 }
 
 /** Parser JSON yang tahan banting (menangani pagar kode dsb.) */
@@ -195,7 +226,7 @@ export async function aiStudio({ imageBase64, mimeType, productName, price, sell
     { text: `Info dari penjual:\n${infoLines}\n\nBuat paket kontennya sekarang.` },
   ];
 
-  return callGemini({ system: STUDIO_SYSTEM, parts, temperature: 0.85, maxOutputTokens: 2000 });
+  return callGemini({ system: STUDIO_SYSTEM, parts, temperature: 0.85 });
 }
 
 // ------------------------------------------------------------
