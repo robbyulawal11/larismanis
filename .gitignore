@@ -1,0 +1,26 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+
+# Environment - JANGAN PERNAH commit file ini (berisi API key rahasia!)
+.env
+.env.local
+.env.*.local
+
+# Editor & OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.local
+
+# Vercel
+.vercel
+
+# Logs
+logs
+*.log
+npm-debug.log*
